@@ -16,6 +16,7 @@ class StudentUI:
         print("  4. 查找学生")
         print("  5. 显示全部学生")
         print("  6. 统计信息")
+        print("  7. 导出到Excel")
         print("  0. 退出")
         print("=" * 40)
 
@@ -146,6 +147,19 @@ class StudentUI:
             print(f"平均分: {stats['average_score']:.2f}")
             print(f"最高分: {stats['max_score']:.2f}")
             print(f"最低分: {stats['min_score']:.2f}")
+
+    def handle_export(self):
+        print("\n--- 导出到Excel ---")
+        filename = input("请输入文件名 (默认: students.xlsx): ").strip()
+        if not filename:
+            filename = "students.xlsx"
+        if not filename.endswith(".xlsx"):
+            filename += ".xlsx"
+
+        if self.manager.export_to_excel(filename):
+            print(f"导出成功: {filename}")
+        else:
+            print("导出失败: 没有学生数据")
 
     def _display_student(self, student: Student):
         print(f"学号: {student.student_id} | 姓名: {student.name} | "

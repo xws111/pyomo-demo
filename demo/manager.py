@@ -1,5 +1,6 @@
 from typing import Optional
 from student import Student
+from openpyxl import Workbook
 
 
 class StudentManager:
@@ -70,3 +71,24 @@ class StudentManager:
             "max_score": max(scores),
             "min_score": min(scores)
         }
+
+    def export_to_excel(self, filename: str = "students.xlsx") -> bool:
+        """Export all students to an Excel file. Returns True if successful."""
+        if not self.students:
+            return False
+
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "学生信息"
+
+        headers = ["学号", "姓名", "年龄", "性别", "成绩"]
+        ws.append(headers)
+
+        for s in self.students:
+            ws.append([s.student_id, s.name, s.age, s.gender, s.score])
+
+        for col in ["A", "B", "C", "D", "E"]:
+            ws.column_dimensions[col].width = 15
+
+        wb.save(filename)
+        return True

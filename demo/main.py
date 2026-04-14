@@ -22,6 +22,8 @@ def main():
             ui.handle_display_all()
         elif choice == "6":
             ui.handle_statistics()
+        elif choice == "7":
+            ui.handle_export()
         elif choice == "0":
             print("感谢使用，再见！")
             break
