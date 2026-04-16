@@ -1,5 +1,8 @@
+import pandas as pd
 from pyomo.core import ConcreteModel, Set, Param, Var
 from pyomo.environ import *
+
+from demo_pyomo.entities import ModelData, Site
 
 
 def get_model_data():
@@ -36,14 +39,14 @@ def get_model_data():
 
 
 def define_sets(model, data):
-    model.s_origins = Set(initialize=data['origins'])
-    model.s_destinations = Set(initialize=data['destinations'])
+    model.s_origins = Set(initialize=[o.code for o in data.origins])
+    model.s_destinations = Set(initialize=[d.code for d in data.destinations])
 
 
 def define_parameters(model, data):
-    model.p_supply = Param(model.s_origins, initialize=data['supply'])
-    model.p_demand = Param(model.s_destinations, initialize=data['demand'])
-    model.p_cost = Param(model.s_origins, model.s_destinations, initialize=data['cost'])
+    model.p_supply = Param(model.s_origins, initialize=data.supply)
+    model.p_demand = Param(model.s_destinations, initialize=data.demand)
+    model.p_cost = Param(model.s_origins, model.s_destinations, initialize=data.cost)
 
 
 def define_variable(model):
@@ -54,14 +57,14 @@ def define_variable(model):
 def define_constraint(model, data):
     # 1. 產地出發的所有流量，小於等於產地生產量
     def supply_constraint(model, o):
-        return sum(model.v_volume[o, d] for d in model.s_destinations) <= data['supply'][o]
+        return sum(model.v_volume[o, d] for d in model.s_destinations) <= data.supply[o]
 
     model.supply_constraint = Constraint(model.s_origins, rule=supply_constraint)
 
     # 2. 到目的地的所有流量 + 鬆弛變量 等於目的地的需求量
 
     def demand_constraint(model, d):
-        return sum(model.v_volume[o, d] for o in model.s_origins) + model.v_slack[d] == data['demand'][d]
+        return sum(model.v_volume[o, d] for o in model.s_origins) + model.v_slack[d] == data.demand[d]
 
     model.demand_constraint = Constraint(model.s_destinations, rule=demand_constraint)
 
@@ -74,7 +77,7 @@ def define_obj(model):
     )
 
 
-def create_model(data: dict) -> ConcreteModel:
+def create_model(data: ModelData) -> ConcreteModel:
     model = ConcreteModel()
     # 1. 定義集合
     define_sets(model, data)
@@ -113,11 +116,32 @@ def post_result(model: ConcreteModel):
                 print(f"  {d}: 未滿足 {slack}")
 
 
+def get_model_data_from_excel(path: str) -> ModelData:
+    raw_data = pd.read_excel(path, sheet_name=None)
+
+    origins = [Site(**row) for _, row in raw_data['origins'].iterrows()]
+    destinations = [Site(**row) for _, row in raw_data['destinations'].iterrows()]
+    supply = raw_data['supply'].set_index('Code')['Value'].to_dict()
+    demand = raw_data['demand'].set_index('Code')['Value'].to_dict()
+    cost = raw_data['cost'].set_index(['origin', 'destination'])['cost'].to_dict()
+
+
+    return ModelData(
+            origins=origins,
+            destinations=destinations,
+            supply=supply,
+            demand=demand,
+            cost=cost,
+        )
+
+
 def solve_opt():
-    # 1. 拿模型數據
-    data = get_model_data()
-    for key, value in data.items():
-        print(key, value)
+    # # 1. 拿模型數據
+    # data = get_model_data()
+    # for key, value in data.items():
+    #     print(key, value)
+    # 1. 从 excel 拿数据
+    data = get_model_data_from_excel("data/ModelData.xlsx")
 
     # 2. 創建模型
     model = create_model(data)
